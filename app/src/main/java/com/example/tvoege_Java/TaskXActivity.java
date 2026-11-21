@@ -15,10 +15,11 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GestureDetectorCompat;
 
+import com.example.tvoege_Java.data.QuestionEntity;
+import com.example.tvoege_Java.data.QuestionRepository;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,14 +28,12 @@ public abstract class TaskXActivity extends AppCompatActivity {
     protected TextView tvQuestion;
     protected MaterialButton[] ansButtons;
     protected GestureDetectorCompat gestureDetector;
+    protected QuestionRepository repository;
 
-    protected List<Question> questions = new ArrayList<>();
+    protected List<QuestionEntity> questions = new ArrayList<>();
     protected int currentIndex = 0;
     protected String currentCorrectAnswer;
     protected int currentTaskId;
-
-
-    protected abstract void loadQuestions();
 
     protected abstract void setupSwipeNavigation(float diffX);
 
@@ -46,7 +45,7 @@ public abstract class TaskXActivity extends AppCompatActivity {
         setContentView(getLayoutResId());
         initViews();
         setupListeners();
-
+        repository = new QuestionRepository(this);
 
         gestureDetector = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -66,6 +65,16 @@ public abstract class TaskXActivity extends AppCompatActivity {
             }
         });
     }
+
+    protected void loadQuestions() {
+        repository.getQuestionsForTask(currentTaskId, loadedQuestions -> {
+            if (isFinishing() || isDestroyed()) return;
+            this.questions = loadedQuestions;
+            this.currentIndex = 0;
+            showQuestion();
+        });
+    }
+
     protected void initViews() {
         tvQuestion = findViewById(R.id.tvQuestion);
         ansButtons = new MaterialButton[]{
@@ -91,6 +100,7 @@ public abstract class TaskXActivity extends AppCompatActivity {
             }
         }
     }
+
     private void setupNavigationButton(int viewId, int taskId) {
         View btn = findViewById(viewId);
         if (btn != null) {
@@ -116,6 +126,7 @@ public abstract class TaskXActivity extends AppCompatActivity {
         finish();
         overridePendingTransition(0, 0);
     }
+
     protected void highlightCurrentTask(int taskId) {
         int[] btnIds = {R.id.btnTask7, R.id.btnTask12, R.id.btnTask13, R.id.btnTask14};
 
@@ -123,11 +134,10 @@ public abstract class TaskXActivity extends AppCompatActivity {
             MaterialButton btn = findViewById(id);
             if (btn == null) continue;
 
-            boolean isCurrent = false;
-            if (id == R.id.btnTask7 && taskId == 7) isCurrent = true;
-            else if (id == R.id.btnTask12 && taskId == 12) isCurrent = true;
-            else if (id == R.id.btnTask13 && taskId == 13) isCurrent = true;
-            else if (id == R.id.btnTask14 && taskId == 14) isCurrent = true;
+            boolean isCurrent = (id == R.id.btnTask7 && taskId == 7)
+                    || (id == R.id.btnTask12 && taskId == 12)
+                    || (id == R.id.btnTask13 && taskId == 13)
+                    || (id == R.id.btnTask14 && taskId == 14);
 
             if (isCurrent) {
                 btn.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.active_back)));
@@ -142,7 +152,16 @@ public abstract class TaskXActivity extends AppCompatActivity {
     }
 
     protected void handleAnswer(MaterialButton selectedBtn) {
-        if (selectedBtn.getText().toString().equals(currentCorrectAnswer)) {
+        if (questions == null || questions.isEmpty()) return;
+
+        for (MaterialButton btn : ansButtons) {
+            if (btn != null) btn.setEnabled(false);
+        }
+
+        boolean isCorrect = selectedBtn.getText().toString().equals(currentCorrectAnswer);
+        repository.recordAnswer(questions.get(currentIndex).id, isCorrect);
+
+        if (isCorrect) {
             selectedBtn.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.green)));
             selectedBtn.postDelayed(() -> {
                 selectedBtn.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.active_back)));
@@ -153,6 +172,9 @@ public abstract class TaskXActivity extends AppCompatActivity {
             selectedBtn.startAnimation(AnimationUtils.loadAnimation(this, R.anim.shake));
             selectedBtn.postDelayed(() -> {
                 selectedBtn.setBackgroundTintList(ColorStateList.valueOf(getColor(R.color.active_back)));
+                for (MaterialButton btn : ansButtons) {
+                    if (btn != null) btn.setEnabled(true);
+                }
                 showRule();
             }, 400);
         }
@@ -162,17 +184,18 @@ public abstract class TaskXActivity extends AppCompatActivity {
         if (questions == null || questions.isEmpty()) {
             return;
         }
-        Question q = questions.get(currentIndex);
+        QuestionEntity q = questions.get(currentIndex);
         tvQuestion.setText(q.text);
-        currentCorrectAnswer = q.options[0];
+        currentCorrectAnswer = q.correctAnswer;
 
-        List<String> shuffledOptions = new ArrayList<>(Arrays.asList(q.options));
+        List<String> shuffledOptions = q.getAllOptions();
         Collections.shuffle(shuffledOptions);
 
         for (int i = 0; i < ansButtons.length; i++) {
             if (i < shuffledOptions.size()) {
                 ansButtons[i].setText(shuffledOptions.get(i));
                 ansButtons[i].setVisibility(View.VISIBLE);
+                ansButtons[i].setEnabled(true);
             } else {
                 ansButtons[i].setVisibility(View.GONE);
             }
@@ -187,6 +210,11 @@ public abstract class TaskXActivity extends AppCompatActivity {
     }
 
     protected void showRule() {
-        new AlertDialog.Builder(this).setTitle("Правило").setMessage(questions.get(currentIndex).rule).setPositiveButton("Понятно", null).show();
+        if (questions == null || questions.isEmpty()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("Правило")
+                .setMessage(questions.get(currentIndex).rule)
+                .setPositiveButton("Понятно", null)
+                .show();
     }
 }

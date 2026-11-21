@@ -11,17 +11,9 @@ public class UniversalTaskActivity extends TaskXActivity {
 
         super.onCreate(savedInstanceState);
 
-        tvQuestion.post(() -> {
-            highlightCurrentTask(currentTaskId);
-        });
+        tvQuestion.post(() -> highlightCurrentTask(currentTaskId));
 
         loadQuestions();
-        showQuestion();
-    }
-
-    @Override
-    protected void loadQuestions() {
-        questions = QuestionsProvider.getQuestionsForTask(currentTaskId);
     }
 
     @Override
