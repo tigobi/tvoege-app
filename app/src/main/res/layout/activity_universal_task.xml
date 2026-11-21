@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background_col"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp">
+
+        <TextView
+            android:id="@+id/tvLogo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:fontFamily="@font/roboto_medium"
+            android:text="Tvoege"
+            android:textColor="@color/active_back"
+            android:textSize="32sp"
+            android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/btnFeedback"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Оценить приложение"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_feedback"
+            app:tint="@color/active_back" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTask7"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="7"
+            android:textColor="@color/unActive_text"
+            app:backgroundTint="@color/unActive_back"
+            android:textSize="20sp"
+            app:cornerRadius="16dp" />
+
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTask12"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="12"
+            android:textColor="@color/unActive_text"
+            android:textSize="20sp"
+            android:layout_marginEnd="8dp"
+            app:backgroundTint="@color/unActive_back"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTask13"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="13"
+            android:textColor="@color/unActive_text"
+            android:textSize="20sp"
+            app:backgroundTint="@color/unActive_back"
+            app:cornerRadius="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnTask14"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="14"
+            android:textColor="@color/unActive_text"
+            android:textSize="20sp"
+            app:backgroundTint="@color/unActive_back"
+            app:cornerRadius="16dp" />
+    </LinearLayout>
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        app:cardBackgroundColor="@color/task_background"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <TextView
+                android:id="@+id/tvQuestion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:fontFamily="@font/nunito_semibold"
+                android:gravity="center"
+                android:text="Загрузка..."
+                android:textColor="@color/main_text"
+                android:textSize="28sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnRule"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ПОДСКАЗКА"
+                android:textColor="@color/unActive_text"
+                app:icon="@android:drawable/ic_menu_info_details"
+                app:iconTint="@color/unActive_text" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="20dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAnswer1"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginBottom="12dp"
+        android:fontFamily="@font/nunito_bold"
+        android:textAllCaps="false"
+        android:textColor="@color/active_text"
+        android:textSize="18sp"
+        app:backgroundTint="@color/active_back"
+        app:cornerRadius="20dp" />
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAnswer2"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginBottom="12dp"
+        android:fontFamily="@font/nunito_bold"
+        android:textAllCaps="false"
+        android:textColor="@color/active_text"
+        android:textSize="18sp"
+        app:backgroundTint="@color/active_back"
+        app:cornerRadius="20dp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnAnswer3"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginBottom="16dp"
+        android:fontFamily="@font/nunito_bold"
+        android:textAllCaps="false"
+        android:textColor="@color/active_text"
+        android:textSize="18sp"
+        app:backgroundTint="@color/active_back"
+        app:cornerRadius="20dp" />
+
+</LinearLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FFFFFFFF</color> <color name="white">#FF000000</color>
+    <color name="light_green">#4DB6AC</color>
+    <color name="green">#81C784</color>
+    <color name="red">#E57373</color>
+    <color name="task_background">#3E2723</color>
+    <color name="background_col">#1A120B</color>
+    <color name="active_back">#A1887F</color>
+    <color name="active_text">#1A120B</color>
+    <color name="unActive_back">#2D2018</color>
+    <color name="unActive_text">#8D6E63</color>
+    <color name="main_text">#E0E0E0</color>
+</resources>
