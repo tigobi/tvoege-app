@@ -21,6 +21,9 @@ import java.util.List;
  */
 public class TaskViewModel extends AndroidViewModel {
 
+    /** Режим тренировки: все вопросы задания или только вопросы с ошибками. */
+    public enum Mode { ALL, MISTAKES }
+
     private final QuestionRepository repository;
 
     private final MutableLiveData<Integer> currentTaskId = new MutableLiveData<>();
@@ -30,13 +33,24 @@ public class TaskViewModel extends AndroidViewModel {
     private final MutableLiveData<List<String>> currentOptions =
             new MutableLiveData<>(Collections.emptyList());
     private final MutableLiveData<Boolean> loading = new MutableLiveData<>(false);
+    private final MutableLiveData<List<Integer>> availableTaskIds =
+            new MutableLiveData<>(Collections.emptyList());
+    private final MutableLiveData<Boolean> mistakesMode = new MutableLiveData<>(false);
 
     /** Задание, для которого уже запущена загрузка (защищает от повторного запроса при повороте). */
     private int requestedTaskId = -1;
+    private Mode requestedMode = Mode.ALL;
+    private int initialTaskId = -1;
 
     public TaskViewModel(@NonNull Application application) {
         super(application);
         repository = new QuestionRepository(application);
+        repository.getTaskIds(taskIds -> {
+            availableTaskIds.setValue(taskIds == null
+                    ? Collections.emptyList()
+                    : taskIds);
+            ensureSessionStarted();
+        });
     }
 
     public LiveData<Integer> getCurrentTaskId() {
@@ -59,24 +73,60 @@ public class TaskViewModel extends AndroidViewModel {
         return loading;
     }
 
+    public LiveData<List<Integer>> getAvailableTaskIds() {
+        return availableTaskIds;
+    }
+
+    public LiveData<Boolean> getMistakesMode() {
+        return mistakesMode;
+    }
+
     /**
      * Запускает тренировку с заданием по умолчанию, если сессия ещё не создана.
      * При пересоздании Activity состояние уже есть, поэтому повторной загрузки не будет.
+     *
+     * @param initialTaskId желаемое задание или -1, чтобы взять первое доступное из БД
      */
     public void startTask(int initialTaskId) {
-        if (currentTaskId.getValue() == null) {
-            selectTask(initialTaskId);
-        }
+        this.initialTaskId = initialTaskId;
+        ensureSessionStarted();
     }
 
-    /** Переключает задание внутри текущей сессии. */
+    private void ensureSessionStarted() {
+        if (currentTaskId.getValue() != null) {
+            return;
+        }
+        List<Integer> taskIds = availableTaskIds.getValue();
+        if (taskIds == null || taskIds.isEmpty()) {
+            return;
+        }
+        int taskId = taskIds.contains(initialTaskId) ? initialTaskId : taskIds.get(0);
+        selectTask(taskId);
+    }
+
+    /** Переключает задание внутри текущей сессии и выходит из режима работы над ошибками. */
     public void selectTask(int taskId) {
-        if (requestedTaskId == taskId) {
+        startSession(taskId, Mode.ALL);
+    }
+
+    /** Включает режим «Работа над ошибками» для текущего задания. */
+    public void selectMistakes() {
+        Integer taskId = currentTaskId.getValue();
+        if (taskId == null) {
+            return;
+        }
+        startSession(taskId, Mode.MISTAKES);
+    }
+
+    private void startSession(int taskId, Mode mode) {
+        if (requestedTaskId == taskId && requestedMode == mode) {
             return;
         }
         requestedTaskId = taskId;
+        requestedMode = mode;
         currentTaskId.setValue(taskId);
-        loadQuestions(taskId);
+        mistakesMode.setValue(mode == Mode.MISTAKES);
+        loadQuestions(taskId, mode);
     }
 
     public QuestionEntity getCurrentQuestion() {
@@ -107,10 +157,10 @@ public class TaskViewModel extends AndroidViewModel {
         updateOptions(list, next);
     }
 
-    private void loadQuestions(int taskId) {
+    private void loadQuestions(int taskId, Mode mode) {
         loading.setValue(true);
-        repository.getQuestionsForTask(taskId, loaded -> {
-            if (requestedTaskId != taskId) {
+        QuestionRepository.Callback<List<QuestionEntity>> callback = loaded -> {
+            if (requestedTaskId != taskId || requestedMode != mode) {
                 return;
             }
             List<QuestionEntity> safeList = loaded == null ? Collections.emptyList() : loaded;
@@ -118,7 +168,12 @@ public class TaskViewModel extends AndroidViewModel {
             currentIndex.setValue(0);
             updateOptions(safeList, 0);
             loading.setValue(false);
-        });
+        };
+        if (mode == Mode.MISTAKES) {
+            repository.getMistakesForTask(taskId, callback);
+        } else {
+            repository.getQuestionsForTask(taskId, callback);
+        }
     }
 
     private void updateOptions(List<QuestionEntity> list, int index) {

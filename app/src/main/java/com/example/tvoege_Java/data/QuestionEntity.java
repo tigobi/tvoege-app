@@ -9,7 +9,8 @@ import java.util.List;
 
 @Entity(tableName = "questions", indices = {@Index("taskId")})
 public class QuestionEntity {
-    @PrimaryKey(autoGenerate = true)
+    /** Стабильный id из questions.json: нужен, чтобы прогресс не терялся при обновлении контента. */
+    @PrimaryKey
     public int id;
 
     public int taskId;
@@ -24,7 +25,9 @@ public class QuestionEntity {
     public QuestionEntity() {}
 
     @Ignore
-    public QuestionEntity(int taskId, String text, String rule, String correctAnswer, List<String> wrongAnswers) {
+    public QuestionEntity(int id, int taskId, String text, String rule,
+                          String correctAnswer, List<String> wrongAnswers) {
+        this.id = id;
         this.taskId = taskId;
         this.text = text;
         this.rule = rule;

@@ -80,6 +80,17 @@ public class QuestionsJsonTest {
     }
 
     @Test
+    public void everyQuestionHasStableUniqueId() throws Exception {
+        Set<Integer> ids = new HashSet<>();
+        for (int i = 0; i < questions.length(); i++) {
+            JSONObject q = questions.getJSONObject(i);
+            int id = q.getInt("id");
+            assertTrue("id должен быть положительным в вопросе #" + i + ": " + id, id > 0);
+            assertTrue("Дубликат id в вопросе #" + i + ": " + id, ids.add(id));
+        }
+    }
+
+    @Test
     public void thereAreNoDuplicateQuestions() throws Exception {
         Set<String> seen = new HashSet<>();
         for (int i = 0; i < questions.length(); i++) {

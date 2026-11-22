@@ -38,64 +38,22 @@
     </RelativeLayout>
 
     <LinearLayout
+        android:id="@+id/taskButtonsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTask7"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="7"
-            android:textColor="@color/unActive_text"
-            app:backgroundTint="@color/unActive_back"
-            android:textSize="20sp"
-            app:cornerRadius="16dp" />
-
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTask12"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="12"
-            android:textColor="@color/unActive_text"
-            android:textSize="20sp"
-            android:layout_marginEnd="8dp"
-            app:backgroundTint="@color/unActive_back"
-            app:cornerRadius="16dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTask13"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="13"
-            android:textColor="@color/unActive_text"
-            android:textSize="20sp"
-            app:backgroundTint="@color/unActive_back"
-            app:cornerRadius="16dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnTask14"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_weight="1"
-            android:text="14"
-            android:textColor="@color/unActive_text"
-            android:textSize="20sp"
-            app:backgroundTint="@color/unActive_back"
-            app:cornerRadius="16dp" />
-    </LinearLayout>
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnMistakes"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="6dp"
+        android:text="РАБОТА НАД ОШИБКАМИ"
+        android:textColor="@color/unActive_text"
+        app:icon="@android:drawable/ic_menu_revert"
+        app:iconTint="@color/unActive_text" />
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"

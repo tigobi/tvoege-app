@@ -2,6 +2,7 @@ package com.example.tvoege_Java;
 
 import android.content.Intent;
 import android.content.res.ColorStateList;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -9,6 +10,7 @@ import android.os.Looper;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
 import android.widget.Toast;
 
@@ -19,27 +21,29 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.tvoege_Java.data.QuestionEntity;
 import com.example.tvoege_Java.databinding.ActivityUniversalTaskBinding;
+import com.example.tvoege_Java.databinding.ItemTaskButtonBinding;
 import com.google.android.material.button.MaterialButton;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Единственный экран тренировки: переключение заданий происходит внутри этой Activity,
- * а состояние сессии хранится в {@link TaskViewModel}.
+ * а состояние сессии хранится в {@link TaskViewModel}. Список доступных заданий
+ * берётся из БД, поэтому новые задания появляются без правок кода.
  */
 public class UniversalTaskActivity extends AppCompatActivity {
 
     private static final String EXTRA_TASK_ID = "EXTRA_TASK_ID";
-    private static final int DEFAULT_TASK_ID = 7;
-    private static final int[] TASK_IDS = {7, 12, 13, 14};
+    private static final int NO_TASK_ID = -1;
 
     private ActivityUniversalTaskBinding binding;
     private TaskViewModel viewModel;
     private GestureDetector gestureDetector;
     private MaterialButton[] answerButtons;
+    private final Map<Integer, MaterialButton> taskButtons = new LinkedHashMap<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-    private int currentTaskId = DEFAULT_TASK_ID;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,7 +63,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
         setupGestureDetector();
         observeViewModel();
 
-        viewModel.startTask(getIntent().getIntExtra(EXTRA_TASK_ID, DEFAULT_TASK_ID));
+        viewModel.startTask(getIntent().getIntExtra(EXTRA_TASK_ID, NO_TASK_ID));
     }
 
     private void setupListeners() {
@@ -69,11 +73,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
                 Uri.parse("https://forms.yandex.ru/u/69a46131eb61465caad99bec"))));
         binding.tvLogo.setOnClickListener(v ->
                 Toast.makeText(this, "Сделал Тихон", Toast.LENGTH_SHORT).show());
-
-        binding.btnTask7.setOnClickListener(v -> navigateTo(7));
-        binding.btnTask12.setOnClickListener(v -> navigateTo(12));
-        binding.btnTask13.setOnClickListener(v -> navigateTo(13));
-        binding.btnTask14.setOnClickListener(v -> navigateTo(14));
+        binding.btnMistakes.setOnClickListener(v -> viewModel.selectMistakes());
 
         for (MaterialButton button : answerButtons) {
             button.setOnClickListener(v -> handleAnswer(button));
@@ -101,21 +101,22 @@ public class UniversalTaskActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
-        viewModel.getCurrentTaskId().observe(this, taskId -> {
-            if (taskId == null) {
-                return;
-            }
-            currentTaskId = taskId;
-            highlightCurrentTask(taskId);
-        });
+        viewModel.getAvailableTaskIds().observe(this, this::renderTaskButtons);
+
+        viewModel.getCurrentTaskId().observe(this, this::highlightCurrentTask);
+
+        viewModel.getMistakesMode().observe(this, this::renderMistakesState);
 
         viewModel.getQuestions().observe(this, questions -> renderCurrentQuestion());
         viewModel.getCurrentIndex().observe(this, index -> renderCurrentQuestion());
+        viewModel.getLoading().observe(this, loading -> renderCurrentQuestion());
         viewModel.getCurrentOptions().observe(this, this::renderOptions);
     }
 
     private void navigateTo(int taskId) {
-        if (currentTaskId == taskId) {
+        Integer current = viewModel.getCurrentTaskId().getValue();
+        boolean isMistakes = Boolean.TRUE.equals(viewModel.getMistakesMode().getValue());
+        if (current != null && current == taskId && !isMistakes) {
             return;
         }
         mainHandler.removeCallbacksAndMessages(null);
@@ -123,25 +124,52 @@ public class UniversalTaskActivity extends AppCompatActivity {
     }
 
     private void navigateToTaskByOffset(int offset) {
-        int currentPosition = -1;
-        for (int i = 0; i < TASK_IDS.length; i++) {
-            if (TASK_IDS[i] == currentTaskId) {
-                currentPosition = i;
-                break;
-            }
-        }
-        int nextPosition = currentPosition + offset;
-        if (currentPosition < 0 || nextPosition < 0 || nextPosition >= TASK_IDS.length) {
+        List<Integer> taskIds = viewModel.getAvailableTaskIds().getValue();
+        Integer current = viewModel.getCurrentTaskId().getValue();
+        if (taskIds == null || current == null) {
             return;
         }
-        navigateTo(TASK_IDS[nextPosition]);
+        int currentPosition = taskIds.indexOf(current);
+        int nextPosition = currentPosition + offset;
+        if (currentPosition < 0 || nextPosition < 0 || nextPosition >= taskIds.size()) {
+            return;
+        }
+        navigateTo(taskIds.get(nextPosition));
+    }
+
+    private void renderTaskButtons(List<Integer> taskIds) {
+        binding.taskButtonsContainer.removeAllViews();
+        taskButtons.clear();
+        if (taskIds == null || taskIds.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < taskIds.size(); i++) {
+            int taskId = taskIds.get(i);
+            ItemTaskButtonBinding item = ItemTaskButtonBinding.inflate(
+                    getLayoutInflater(), binding.taskButtonsContainer, false);
+            MaterialButton button = item.getRoot();
+            button.setText(String.valueOf(taskId));
+
+            ViewGroup.MarginLayoutParams params =
+                    (ViewGroup.MarginLayoutParams) button.getLayoutParams();
+            params.setMarginEnd(i == taskIds.size() - 1 ? 0 : dp(8));
+
+            button.setOnClickListener(v -> navigateTo(taskId));
+            binding.taskButtonsContainer.addView(button);
+            taskButtons.put(taskId, button);
+        }
+
+        Integer current = viewModel.getCurrentTaskId().getValue();
+        if (current != null) {
+            highlightCurrentTask(current);
+        }
     }
 
     private void highlightCurrentTask(int taskId) {
-        applyTaskButtonState(binding.btnTask7, taskId == 7);
-        applyTaskButtonState(binding.btnTask12, taskId == 12);
-        applyTaskButtonState(binding.btnTask13, taskId == 13);
-        applyTaskButtonState(binding.btnTask14, taskId == 14);
+        for (Map.Entry<Integer, MaterialButton> entry : taskButtons.entrySet()) {
+            applyTaskButtonState(entry.getValue(), entry.getKey() == taskId);
+        }
     }
 
     private void applyTaskButtonState(MaterialButton button, boolean isCurrent) {
@@ -154,6 +182,14 @@ public class UniversalTaskActivity extends AppCompatActivity {
             button.setTextColor(getColor(R.color.unActive_text));
             button.setElevation(0f);
         }
+    }
+
+    private void renderMistakesState(Boolean isActive) {
+        boolean active = Boolean.TRUE.equals(isActive);
+        int color = getColor(active ? R.color.active_back : R.color.unActive_text);
+        binding.btnMistakes.setTextColor(color);
+        binding.btnMistakes.setIconTint(ColorStateList.valueOf(color));
+        binding.btnMistakes.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
     }
 
     private void handleAnswer(MaterialButton selectedButton) {
@@ -199,10 +235,15 @@ public class UniversalTaskActivity extends AppCompatActivity {
     private void renderCurrentQuestion() {
         QuestionEntity question = viewModel.getCurrentQuestion();
         if (question == null) {
-            Boolean isLoading = viewModel.getLoading().getValue();
-            binding.tvQuestion.setText(isLoading != null && isLoading
-                    ? "Загрузка..."
-                    : "Вопросы не найдены");
+            boolean isLoading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
+            boolean isMistakes = Boolean.TRUE.equals(viewModel.getMistakesMode().getValue());
+            if (isLoading) {
+                binding.tvQuestion.setText("Загрузка...");
+            } else if (isMistakes) {
+                binding.tvQuestion.setText("Ошибок по этому заданию пока нет");
+            } else {
+                binding.tvQuestion.setText("Вопросы не найдены");
+            }
             return;
         }
 
@@ -238,11 +279,16 @@ public class UniversalTaskActivity extends AppCompatActivity {
                 .show();
     }
 
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         gestureDetector.onTouchEvent(ev);
         return super.dispatchTouchEvent(ev);
     }
+
     @Override
     protected void onDestroy() {
         mainHandler.removeCallbacksAndMessages(null);
