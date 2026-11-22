@@ -3,6 +3,7 @@ package com.example.tvoege_Java.data;
 import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.BufferedReader;
@@ -14,6 +15,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class QuestionRepository {
+    private static final String TAG = "QuestionRepository";
+
     public interface Callback<T> {
         void onResult(T result);
     }
@@ -71,7 +74,7 @@ public class QuestionRepository {
             }
             dao.insertAll(items);
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e(TAG, "Не удалось загрузить вопросы из questions.json", e);
         }
     }
 }

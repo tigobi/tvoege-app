@@ -11,9 +11,9 @@ import android.view.animation.AnimationUtils;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.GestureDetectorCompat;
 
 import com.example.tvoege_Java.data.QuestionEntity;
 import com.example.tvoege_Java.data.QuestionRepository;
@@ -27,7 +27,7 @@ public abstract class TaskXActivity extends AppCompatActivity {
 
     protected TextView tvQuestion;
     protected MaterialButton[] ansButtons;
-    protected GestureDetectorCompat gestureDetector;
+    protected GestureDetector gestureDetector;
     protected QuestionRepository repository;
 
     protected List<QuestionEntity> questions = new ArrayList<>();
@@ -47,14 +47,14 @@ public abstract class TaskXActivity extends AppCompatActivity {
         setupListeners();
         repository = new QuestionRepository(this);
 
-        gestureDetector = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
-            public boolean onDown(MotionEvent e) {
+            public boolean onDown(@NonNull MotionEvent e) {
                 return true;
             }
 
             @Override
-            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            public boolean onFling(@NonNull MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
                 if (e1 == null || e2 == null) return false;
                 float diffX = e2.getX() - e1.getX();
                 if (Math.abs(diffX) > 100 && Math.abs(velocityX) > 100) {
