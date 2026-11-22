@@ -29,12 +29,18 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+    buildFeatures {
+        viewBinding = true
+    }
 }
 
 dependencies {
     val roomVersion = "2.6.1"
+    val lifecycleVersion = "2.8.7"
     implementation("androidx.room:room-runtime:$roomVersion")
     annotationProcessor("androidx.room:room-compiler:$roomVersion")
+    implementation("androidx.lifecycle:lifecycle-viewmodel:$lifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-livedata:$lifecycleVersion")
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
