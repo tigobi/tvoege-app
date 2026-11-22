@@ -1,5 +1,6 @@
 package com.example.tvoege_Java.data;
 
+import androidx.room.ColumnInfo;
 import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.Index;
@@ -21,6 +22,14 @@ public class QuestionEntity {
 
     public int correctCount;
     public int wrongCount;
+
+    /**
+     * «Долг» по ошибке: сколько правильных ответов подряд нужно, чтобы вопрос
+     * ушёл из режима «Работа над ошибками». Ошибка ставит 2, правильный ответ
+     * уменьшает на 1. На общую статистику correctCount/wrongCount не влияет.
+     */
+    @ColumnInfo(defaultValue = "0")
+    public int mistakeDebt;
 
     public QuestionEntity() {}
 

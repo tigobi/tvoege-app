@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.constraintlayout)
     testImplementation(libs.junit)
     testImplementation("org.json:json:20240303")
+    testImplementation("org.xerial:sqlite-jdbc:3.41.2.2")
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
 }

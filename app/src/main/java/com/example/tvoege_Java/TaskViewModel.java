@@ -24,6 +24,9 @@ public class TaskViewModel extends AndroidViewModel {
     /** Режим тренировки: все вопросы задания или только вопросы с ошибками. */
     public enum Mode { ALL, MISTAKES }
 
+    /** Сколько правильных ответов подряд нужно, чтобы вопрос ушёл из работы над ошибками. */
+    private static final int MISTAKE_DEBT_ON_ERROR = 2;
+
     private final QuestionRepository repository;
 
     private final MutableLiveData<Integer> currentTaskId = new MutableLiveData<>();
@@ -36,6 +39,7 @@ public class TaskViewModel extends AndroidViewModel {
     private final MutableLiveData<List<Integer>> availableTaskIds =
             new MutableLiveData<>(Collections.emptyList());
     private final MutableLiveData<Boolean> mistakesMode = new MutableLiveData<>(false);
+    private final MutableLiveData<Boolean> mistakesCompleted = new MutableLiveData<>(false);
 
     /** Задание, для которого уже запущена загрузка (защищает от повторного запроса при повороте). */
     private int requestedTaskId = -1;
@@ -79,6 +83,11 @@ public class TaskViewModel extends AndroidViewModel {
 
     public LiveData<Boolean> getMistakesMode() {
         return mistakesMode;
+    }
+
+    /** true, когда в режиме ошибок не осталось ни одного вопроса. */
+    public LiveData<Boolean> getMistakesCompleted() {
+        return mistakesCompleted;
     }
 
     /**
@@ -126,6 +135,7 @@ public class TaskViewModel extends AndroidViewModel {
         requestedMode = mode;
         currentTaskId.setValue(taskId);
         mistakesMode.setValue(mode == Mode.MISTAKES);
+        mistakesCompleted.setValue(false);
         loadQuestions(taskId, mode);
     }
 
@@ -143,6 +153,13 @@ public class TaskViewModel extends AndroidViewModel {
         if (question == null) {
             return;
         }
+        if (Boolean.TRUE.equals(mistakesMode.getValue())) {
+            // Держим «долг» в памяти синхронно с БД, чтобы список ошибок
+            // обновлялся сразу после ответа, не дожидаясь повторного запроса.
+            question.mistakeDebt = isCorrect
+                    ? Math.max(0, question.mistakeDebt - 1)
+                    : MISTAKE_DEBT_ON_ERROR;
+        }
         repository.recordAnswer(question.id, isCorrect);
     }
 
@@ -151,10 +168,42 @@ public class TaskViewModel extends AndroidViewModel {
         if (list == null || list.isEmpty()) {
             return;
         }
-        Integer index = currentIndex.getValue();
-        int next = ((index == null ? 0 : index) + 1) % list.size();
+        int index = currentIndex.getValue() == null ? 0 : currentIndex.getValue();
+        if (index < 0 || index >= list.size()) {
+            index = 0;
+        }
+
+        if (Boolean.TRUE.equals(mistakesMode.getValue())
+                && list.get(index).mistakeDebt <= 0) {
+            removeCurrentMistake(list, index);
+            return;
+        }
+
+        int next = (index + 1) % list.size();
         currentIndex.setValue(next);
         updateOptions(list, next);
+    }
+
+    /**
+     * Убирает отработанный вопрос из списка ошибок. Индекс остаётся на месте,
+     * потому что следующий вопрос сдвигается на его позицию.
+     */
+    private void removeCurrentMistake(List<QuestionEntity> list, int index) {
+        List<QuestionEntity> updated = new ArrayList<>(list);
+        updated.remove(index);
+
+        if (updated.isEmpty()) {
+            questions.setValue(updated);
+            currentIndex.setValue(0);
+            currentOptions.setValue(Collections.emptyList());
+            mistakesCompleted.setValue(true);
+            return;
+        }
+
+        int next = index >= updated.size() ? 0 : index;
+        currentIndex.setValue(next);
+        questions.setValue(updated);
+        updateOptions(updated, next);
     }
 
     private void loadQuestions(int taskId, Mode mode) {

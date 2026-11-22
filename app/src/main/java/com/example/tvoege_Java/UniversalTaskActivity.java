@@ -107,6 +107,8 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
         viewModel.getMistakesMode().observe(this, this::renderMistakesState);
 
+        viewModel.getMistakesCompleted().observe(this, completed -> renderCurrentQuestion());
+
         viewModel.getQuestions().observe(this, questions -> renderCurrentQuestion());
         viewModel.getCurrentIndex().observe(this, index -> renderCurrentQuestion());
         viewModel.getLoading().observe(this, loading -> renderCurrentQuestion());
@@ -240,7 +242,11 @@ public class UniversalTaskActivity extends AppCompatActivity {
             if (isLoading) {
                 binding.tvQuestion.setText("Загрузка...");
             } else if (isMistakes) {
-                binding.tvQuestion.setText("Ошибок по этому заданию пока нет");
+                boolean completed = Boolean.TRUE.equals(
+                        viewModel.getMistakesCompleted().getValue());
+                binding.tvQuestion.setText(completed
+                        ? "Все ошибки по этому заданию отработаны"
+                        : "Ошибок по этому заданию пока нет");
             } else {
                 binding.tvQuestion.setText("Вопросы не найдены");
             }

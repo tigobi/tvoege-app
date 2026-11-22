@@ -31,7 +31,7 @@ public class QuestionRepository {
     /**
      * Версия контента. Увеличивайте её при любом изменении questions.json —
      * тогда при запуске новые вопросы добавятся/обновятся в существующей БД,
-     * а correctCount и wrongCount сохранятся.
+     * а correctCount, wrongCount и mistakeDebt сохранятся.
      */
     private static final int CONTENT_VERSION = 2;
 
@@ -120,6 +120,7 @@ public class QuestionRepository {
             if (progress != null) {
                 item.correctCount = progress.correctCount;
                 item.wrongCount = progress.wrongCount;
+                item.mistakeDebt = progress.mistakeDebt;
             }
         }
 

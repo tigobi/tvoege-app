@@ -10,7 +10,7 @@ import androidx.room.TypeConverters;
 import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
-@Database(entities = {QuestionEntity.class}, version = 2, exportSchema = false)
+@Database(entities = {QuestionEntity.class}, version = 3, exportSchema = false)
 @TypeConverters({Converters.class})
 public abstract class AppDatabase extends RoomDatabase {
     private static final String DB_NAME = "tvoege_db";
@@ -43,6 +43,25 @@ public abstract class AppDatabase extends RoomDatabase {
         }
     };
 
+    /**
+     * Версия 3: появился «долг» по ошибке (mistakeDebt). Существующие ошибки
+     * получают долг 2, чтобы не пропасть из режима «Работа над ошибками».
+     * SQL вынесен в константы, чтобы его можно было проверить unit-тестом на SQLite.
+     */
+    static final String[] MIGRATION_2_3_SQL = {
+            "ALTER TABLE questions ADD COLUMN mistakeDebt INTEGER NOT NULL DEFAULT 0",
+            "UPDATE questions SET mistakeDebt = 2 WHERE wrongCount > 0"
+    };
+
+    static final Migration MIGRATION_2_3 = new Migration(2, 3) {
+        @Override
+        public void migrate(@NonNull SupportSQLiteDatabase db) {
+            for (String sql : MIGRATION_2_3_SQL) {
+                db.execSQL(sql);
+            }
+        }
+    };
+
     private static volatile AppDatabase INSTANCE;
 
     public abstract QuestionDao questionDao();
@@ -55,7 +74,7 @@ public abstract class AppDatabase extends RoomDatabase {
                             context.getApplicationContext(),
                             AppDatabase.class,
                             DB_NAME
-                    ).addMigrations(MIGRATION_1_2).build();
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build();
                 }
             }
         }
