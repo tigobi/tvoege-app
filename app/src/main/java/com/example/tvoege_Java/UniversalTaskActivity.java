@@ -19,6 +19,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.tvoege_Java.data.QuestionEntity;
@@ -58,6 +59,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         binding = ActivityUniversalTaskBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
@@ -207,19 +209,30 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
     private void renderMistakesState(Boolean isActive) {
         boolean active = Boolean.TRUE.equals(isActive);
-        int color = getColor(active ? R.color.active_back : R.color.unActive_text);
-        binding.btnMistakes.setTextColor(color);
-        binding.btnMistakes.setIconTint(ColorStateList.valueOf(color));
+        int foreground = getColor(active ? R.color.active_text : R.color.unActive_text);
+        binding.btnMistakes.setBackgroundTintList(ColorStateList.valueOf(getColor(
+                active ? R.color.active_back : android.R.color.transparent)));
+        binding.btnMistakes.setTextColor(foreground);
+        binding.btnMistakes.setIconTint(ColorStateList.valueOf(foreground));
         binding.btnMistakes.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
         renderMistakesLabel();
     }
 
-    /** Показывает количество активных ошибок прямо на кнопке режима отработки. */
+    /** Показывает количество активных ошибок прямо на компактной кнопке режима отработки. */
     private void renderMistakesLabel() {
         int mistakes = currentStats == null ? 0 : currentStats.mistakesCount;
-        binding.btnMistakes.setText(mistakes > 0
-                ? "РАБОТА НАД ОШИБКАМИ (" + mistakes + ")"
-                : "РАБОТА НАД ОШИБКАМИ");
+        binding.btnMistakes.setText(mistakes > 0 ? String.valueOf(mistakes) : "");
+        if (mistakes > 0) {
+            binding.btnMistakes.setIconPadding(dp(4));
+            binding.btnMistakes.setPadding(dp(8), 0, dp(10), 0);
+        } else {
+            // Без текста иконка должна стоять строго по центру квадратной кнопки.
+            binding.btnMistakes.setIconPadding(0);
+            binding.btnMistakes.setPadding(dp(10), 0, dp(10), 0);
+        }
+        binding.btnMistakes.setContentDescription(mistakes > 0
+                ? "Работа над ошибками: активных ошибок " + mistakes
+                : "Работа над ошибками: активных ошибок нет");
     }
 
     private void renderCurrentTaskStats(TaskStats stats) {
@@ -227,19 +240,12 @@ public class UniversalTaskActivity extends AppCompatActivity {
         renderMistakesLabel();
 
         if (stats == null || stats.totalCount <= 0) {
-            binding.tvProgressSummary.setVisibility(View.GONE);
-            binding.progressCurrentTask.setVisibility(View.GONE);
+            binding.tvMasteredCounter.setVisibility(View.GONE);
             return;
         }
 
-        String summary = "Освоено: " + stats.masteredCount + " / " + stats.totalCount;
-        if (stats.hasAnswers()) {
-            summary += " • Точность: " + stats.getAccuracyPercent() + "%";
-        }
-        binding.tvProgressSummary.setText(summary);
-        binding.tvProgressSummary.setVisibility(View.VISIBLE);
-        binding.progressCurrentTask.setProgress(stats.getMasteredPercent());
-        binding.progressCurrentTask.setVisibility(View.VISIBLE);
+        binding.tvMasteredCounter.setText(stats.masteredCount + " / " + stats.totalCount);
+        binding.tvMasteredCounter.setVisibility(View.VISIBLE);
     }
 
     private void handleAnswer(MaterialButton selectedButton) {
