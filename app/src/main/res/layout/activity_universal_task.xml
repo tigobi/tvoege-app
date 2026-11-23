@@ -31,7 +31,7 @@
             android:paddingEnd="10dp"
             android:textColor="@color/unActive_text"
             android:textSize="16sp"
-            app:backgroundTint="@android:color/transparent"
+            app:backgroundTint="@color/unActive_back"
             app:cornerRadius="20dp"
             app:icon="@drawable/ic_repeat"
             app:iconGravity="textStart"
@@ -76,12 +76,22 @@
             app:tint="@color/active_back" />
     </RelativeLayout>
 
-    <LinearLayout
-        android:id="@+id/taskButtonsContainer"
+    <HorizontalScrollView
+        android:id="@+id/taskButtonsScroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:orientation="horizontal" />
+        android:fillViewport="true"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:id="@+id/taskButtonsContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
 
     <TextView
         android:id="@+id/tvMasteredCounter"

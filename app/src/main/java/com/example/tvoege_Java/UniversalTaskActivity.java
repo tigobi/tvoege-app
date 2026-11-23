@@ -176,7 +176,14 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
             ViewGroup.MarginLayoutParams params =
                     (ViewGroup.MarginLayoutParams) button.getLayoutParams();
+            params.width = ViewGroup.LayoutParams.WRAP_CONTENT;
             params.setMarginEnd(i == taskIds.size() - 1 ? 0 : dp(8));
+            if (params instanceof LinearLayout.LayoutParams) {
+                // В горизонтальном скролле кнопки должны сохранять естественную ширину,
+                // иначе при большом числе заданий они сжимаются под ширину экрана.
+                ((LinearLayout.LayoutParams) params).weight = 0f;
+            }
+            button.setLayoutParams(params);
 
             button.setOnClickListener(v -> navigateTo(taskId));
             binding.taskButtonsContainer.addView(button);
@@ -193,6 +200,23 @@ public class UniversalTaskActivity extends AppCompatActivity {
         for (Map.Entry<Integer, MaterialButton> entry : taskButtons.entrySet()) {
             applyTaskButtonState(entry.getValue(), entry.getKey() == taskId);
         }
+        scrollToCurrentTask(taskId);
+    }
+
+    /** Плавно подкручивает панель заданий так, чтобы активная кнопка была видна. */
+    private void scrollToCurrentTask(int taskId) {
+        MaterialButton button = taskButtons.get(taskId);
+        if (button == null) {
+            return;
+        }
+        binding.taskButtonsScroll.post(() -> {
+            int viewportWidth = binding.taskButtonsScroll.getWidth();
+            int contentWidth = binding.taskButtonsContainer.getWidth();
+            int target = button.getLeft() - (viewportWidth - button.getWidth()) / 2;
+            int maxScroll = Math.max(0, contentWidth - viewportWidth);
+            binding.taskButtonsScroll.smoothScrollTo(
+                    Math.max(0, Math.min(target, maxScroll)), 0);
+        });
     }
 
     private void applyTaskButtonState(MaterialButton button, boolean isCurrent) {
@@ -211,7 +235,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
         boolean active = Boolean.TRUE.equals(isActive);
         int foreground = getColor(active ? R.color.active_text : R.color.unActive_text);
         binding.btnMistakes.setBackgroundTintList(ColorStateList.valueOf(getColor(
-                active ? R.color.active_back : android.R.color.transparent)));
+                active ? R.color.active_back : R.color.unActive_back)));
         binding.btnMistakes.setTextColor(foreground);
         binding.btnMistakes.setIconTint(ColorStateList.valueOf(foreground));
         binding.btnMistakes.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
