@@ -36,6 +36,18 @@ public interface QuestionDao {
     @Query("SELECT COUNT(*) FROM questions")
     int getCount();
 
+    /** Сводная статистика по одному заданию; {@code null}, если вопросов нет. */
+    @Query(TaskStatsQueries.TASK_STATS)
+    TaskStats getTaskStats(int taskId);
+
+    /** Статистика по всем заданиям в порядке возрастания taskId. */
+    @Query(TaskStatsQueries.ALL_TASK_STATS)
+    List<TaskStats> getAllTasksStats();
+
+    /** Сбрасывает весь накопленный прогресс, не удаляя сами вопросы. */
+    @Query(TaskStatsQueries.RESET_ALL_STATS)
+    void resetAllStats();
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     void insertAll(List<QuestionEntity> questions);
 

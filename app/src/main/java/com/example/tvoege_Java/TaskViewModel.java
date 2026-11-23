@@ -9,6 +9,7 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.tvoege_Java.data.QuestionEntity;
 import com.example.tvoege_Java.data.QuestionRepository;
+import com.example.tvoege_Java.data.TaskStats;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,6 +41,9 @@ public class TaskViewModel extends AndroidViewModel {
             new MutableLiveData<>(Collections.emptyList());
     private final MutableLiveData<Boolean> mistakesMode = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> mistakesCompleted = new MutableLiveData<>(false);
+    private final MutableLiveData<TaskStats> currentTaskStats = new MutableLiveData<>();
+    private final MutableLiveData<List<TaskStats>> allTasksStats =
+            new MutableLiveData<>(Collections.emptyList());
 
     /** Задание, для которого уже запущена загрузка (защищает от повторного запроса при повороте). */
     private int requestedTaskId = -1;
@@ -90,6 +94,16 @@ public class TaskViewModel extends AndroidViewModel {
         return mistakesCompleted;
     }
 
+    /** Статистика по текущему заданию. */
+    public LiveData<TaskStats> getCurrentTaskStats() {
+        return currentTaskStats;
+    }
+
+    /** Статистика по всем заданиям из БД (для экрана сводки). */
+    public LiveData<List<TaskStats>> getAllTasksStats() {
+        return allTasksStats;
+    }
+
     /**
      * Запускает тренировку с заданием по умолчанию, если сессия ещё не создана.
      * При пересоздании Activity состояние уже есть, поэтому повторной загрузки не будет.
@@ -133,10 +147,16 @@ public class TaskViewModel extends AndroidViewModel {
         }
         requestedTaskId = taskId;
         requestedMode = mode;
+        Integer activeTaskId = currentTaskId.getValue();
+        if (activeTaskId == null || activeTaskId != taskId) {
+            currentTaskStats.setValue(null);
+        }
         currentTaskId.setValue(taskId);
         mistakesMode.setValue(mode == Mode.MISTAKES);
         mistakesCompleted.setValue(false);
         loadQuestions(taskId, mode);
+        loadCurrentTaskStats(taskId);
+        refreshAllTasksStats();
     }
 
     public QuestionEntity getCurrentQuestion() {
@@ -161,6 +181,46 @@ public class TaskViewModel extends AndroidViewModel {
                     : MISTAKE_DEBT_ON_ERROR;
         }
         repository.recordAnswer(question.id, isCorrect);
+        loadCurrentTaskStats(question.taskId);
+        refreshAllTasksStats();
+    }
+
+    /** Перечитывает статистику по текущему заданию (например, при открытии сводки). */
+    public void refreshCurrentTaskStats() {
+        Integer taskId = currentTaskId.getValue();
+        if (taskId != null) {
+            loadCurrentTaskStats(taskId);
+        }
+    }
+
+    /** Перечитывает статистику по всем заданиям. */
+    public void refreshAllTasksStats() {
+        repository.getAllTasksStats(allTasksStats::setValue);
+    }
+
+    /**
+     * Сбрасывает весь прогресс ответов и перезагружает текущий список вопросов,
+     * чтобы режим «Работа над ошибками» сразу опустел.
+     */
+    public void resetStatistics() {
+        repository.resetAllStats(ignored -> {
+            Integer taskId = currentTaskId.getValue();
+            if (taskId == null) {
+                return;
+            }
+            loadQuestions(taskId, requestedMode);
+            loadCurrentTaskStats(taskId);
+            refreshAllTasksStats();
+        });
+    }
+
+    private void loadCurrentTaskStats(int taskId) {
+        repository.getTaskStats(taskId, stats -> {
+            Integer current = currentTaskId.getValue();
+            if (current != null && current == taskId) {
+                currentTaskStats.setValue(stats);
+            }
+        });
     }
 
     public void nextQuestion() {

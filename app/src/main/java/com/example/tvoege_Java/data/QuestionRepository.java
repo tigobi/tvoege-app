@@ -87,6 +87,38 @@ public class QuestionRepository {
         });
     }
 
+    /** Статистика по одному заданию. Для пустого задания вернёт нулевую сводку. */
+    public void getTaskStats(int taskId, Callback<TaskStats> callback) {
+        executor.execute(() -> {
+            ensureContentUpToDate();
+            TaskStats stats = dao.getTaskStats(taskId);
+            if (stats == null) {
+                stats = new TaskStats();
+                stats.taskId = taskId;
+            }
+            TaskStats result = stats;
+            mainHandler.post(() -> callback.onResult(result));
+        });
+    }
+
+    /** Статистика по всем заданиям в порядке возрастания taskId. */
+    public void getAllTasksStats(Callback<List<TaskStats>> callback) {
+        executor.execute(() -> {
+            ensureContentUpToDate();
+            List<TaskStats> stats = dao.getAllTasksStats();
+            mainHandler.post(() -> callback.onResult(
+                    stats == null ? Collections.emptyList() : stats));
+        });
+    }
+
+    /** Сбрасывает весь прогресс ответов и по завершении сообщает на главном потоке. */
+    public void resetAllStats(Callback<Void> callback) {
+        executor.execute(() -> {
+            dao.resetAllStats();
+            mainHandler.post(() -> callback.onResult(null));
+        });
+    }
+
     /**
      * Синхронизирует содержимое БД с questions.json, если версия контента изменилась.
      * Прогресс переносится по стабильному id, а для баз, созданных до появления

@@ -25,6 +25,19 @@
             android:textStyle="bold" />
 
         <ImageButton
+            android:id="@+id/btnStats"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_centerVertical="true"
+            android:layout_marginEnd="8dp"
+            android:layout_toStartOf="@id/btnFeedback"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Статистика"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_stats"
+            app:tint="@color/active_back" />
+
+        <ImageButton
             android:id="@+id/btnFeedback"
             android:layout_width="40dp"
             android:layout_height="40dp"
@@ -43,6 +56,29 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="10dp"
         android:orientation="horizontal" />
+
+    <TextView
+        android:id="@+id/tvProgressSummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"
+        android:fontFamily="@font/nunito_semibold"
+        android:gravity="center"
+        android:textColor="@color/unActive_text"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+    <ProgressBar
+        android:id="@+id/progressCurrentTask"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="6dp"
+        android:layout_marginBottom="6dp"
+        android:max="100"
+        android:progress="0"
+        android:progressBackgroundTint="@color/unActive_back"
+        android:progressTint="@color/active_back"
+        android:visibility="gone" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnMistakes"

@@ -12,6 +12,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -20,10 +22,15 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.tvoege_Java.data.QuestionEntity;
+import com.example.tvoege_Java.data.TaskStats;
 import com.example.tvoege_Java.databinding.ActivityUniversalTaskBinding;
+import com.example.tvoege_Java.databinding.DialogStatisticsBinding;
 import com.example.tvoege_Java.databinding.ItemTaskButtonBinding;
+import com.example.tvoege_Java.databinding.ItemTaskStatsBinding;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +51,10 @@ public class UniversalTaskActivity extends AppCompatActivity {
     private MaterialButton[] answerButtons;
     private final Map<Integer, MaterialButton> taskButtons = new LinkedHashMap<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
+
+    private BottomSheetDialog statsSheet;
+    private DialogStatisticsBinding statsSheetBinding;
+    private TaskStats currentStats;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +82,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
         binding.btnFeedback.setOnClickListener(v -> startActivity(new Intent(
                 Intent.ACTION_VIEW,
                 Uri.parse("https://forms.yandex.ru/u/69a46131eb61465caad99bec"))));
+        binding.btnStats.setOnClickListener(v -> showStatistics());
         binding.tvLogo.setOnClickListener(v ->
                 Toast.makeText(this, "Сделал Тихон", Toast.LENGTH_SHORT).show());
         binding.btnMistakes.setOnClickListener(v -> viewModel.selectMistakes());
@@ -113,6 +125,13 @@ public class UniversalTaskActivity extends AppCompatActivity {
         viewModel.getCurrentIndex().observe(this, index -> renderCurrentQuestion());
         viewModel.getLoading().observe(this, loading -> renderCurrentQuestion());
         viewModel.getCurrentOptions().observe(this, this::renderOptions);
+
+        viewModel.getCurrentTaskStats().observe(this, this::renderCurrentTaskStats);
+        viewModel.getAllTasksStats().observe(this, stats -> {
+            if (statsSheetBinding != null) {
+                renderStatistics(stats);
+            }
+        });
     }
 
     private void navigateTo(int taskId) {
@@ -192,6 +211,35 @@ public class UniversalTaskActivity extends AppCompatActivity {
         binding.btnMistakes.setTextColor(color);
         binding.btnMistakes.setIconTint(ColorStateList.valueOf(color));
         binding.btnMistakes.setTypeface(null, active ? Typeface.BOLD : Typeface.NORMAL);
+        renderMistakesLabel();
+    }
+
+    /** Показывает количество активных ошибок прямо на кнопке режима отработки. */
+    private void renderMistakesLabel() {
+        int mistakes = currentStats == null ? 0 : currentStats.mistakesCount;
+        binding.btnMistakes.setText(mistakes > 0
+                ? "РАБОТА НАД ОШИБКАМИ (" + mistakes + ")"
+                : "РАБОТА НАД ОШИБКАМИ");
+    }
+
+    private void renderCurrentTaskStats(TaskStats stats) {
+        currentStats = stats;
+        renderMistakesLabel();
+
+        if (stats == null || stats.totalCount <= 0) {
+            binding.tvProgressSummary.setVisibility(View.GONE);
+            binding.progressCurrentTask.setVisibility(View.GONE);
+            return;
+        }
+
+        String summary = "Освоено: " + stats.masteredCount + " / " + stats.totalCount;
+        if (stats.hasAnswers()) {
+            summary += " • Точность: " + stats.getAccuracyPercent() + "%";
+        }
+        binding.tvProgressSummary.setText(summary);
+        binding.tvProgressSummary.setVisibility(View.VISIBLE);
+        binding.progressCurrentTask.setProgress(stats.getMasteredPercent());
+        binding.progressCurrentTask.setVisibility(View.VISIBLE);
     }
 
     private void handleAnswer(MaterialButton selectedButton) {
@@ -236,6 +284,7 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
     private void renderCurrentQuestion() {
         QuestionEntity question = viewModel.getCurrentQuestion();
+        binding.btnRule.setVisibility(question == null ? View.GONE : View.VISIBLE);
         if (question == null) {
             boolean isLoading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
             boolean isMistakes = Boolean.TRUE.equals(viewModel.getMistakesMode().getValue());
@@ -271,6 +320,84 @@ public class UniversalTaskActivity extends AppCompatActivity {
                 button.setVisibility(View.GONE);
             }
         }
+    }
+
+    private void showStatistics() {
+        if (statsSheet != null && statsSheet.isShowing()) {
+            return;
+        }
+        viewModel.refreshCurrentTaskStats();
+        viewModel.refreshAllTasksStats();
+
+        statsSheetBinding = DialogStatisticsBinding.inflate(getLayoutInflater());
+        statsSheet = new BottomSheetDialog(this);
+        statsSheet.setContentView(statsSheetBinding.getRoot());
+        statsSheetBinding.btnResetStats.setOnClickListener(v -> confirmResetStatistics());
+        statsSheet.setOnDismissListener(dialog -> {
+            statsSheet = null;
+            statsSheetBinding = null;
+        });
+
+        renderStatistics(viewModel.getAllTasksStats().getValue());
+        statsSheet.show();
+    }
+
+    private void renderStatistics(List<TaskStats> stats) {
+        if (statsSheetBinding == null) {
+            return;
+        }
+        List<TaskStats> safeStats = stats == null ? Collections.emptyList() : stats;
+        TaskStats total = TaskStats.sum(safeStats);
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("Освоено: ").append(total.masteredCount)
+                .append(" / ").append(total.totalCount);
+        if (total.hasAnswers()) {
+            summary.append(" • Точность: ").append(total.getAccuracyPercent()).append("%");
+        }
+        summary.append('\n').append("Активных ошибок: ").append(total.mistakesCount);
+        if (total.hasAnswers()) {
+            summary.append(" • Ответов: ").append(total.getAnsweredCount());
+        }
+        statsSheetBinding.tvStatsOverall.setText(summary);
+
+        LinearLayout container = statsSheetBinding.statsContainer;
+        container.removeAllViews();
+
+        if (safeStats.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("Статистики пока нет");
+            empty.setTextColor(getColor(R.color.unActive_text));
+            empty.setTextSize(14f);
+            container.addView(empty);
+            return;
+        }
+
+        for (TaskStats item : safeStats) {
+            ItemTaskStatsBinding row = ItemTaskStatsBinding.inflate(
+                    getLayoutInflater(), container, false);
+            row.tvStatsTaskTitle.setText("Задание " + item.taskId);
+            row.tvStatsMastered.setText("Освоено: " + item.masteredCount + " / " + item.totalCount);
+            row.pbStatsMastered.setProgress(item.getMasteredPercent());
+            row.tvStatsAccuracy.setText(item.hasAnswers()
+                    ? "Точность: " + item.getAccuracyPercent() + "%"
+                    : "Точность: —");
+            row.tvStatsMistakes.setText("Активных ошибок: " + item.mistakesCount);
+            container.addView(row.getRoot());
+        }
+    }
+
+    private void confirmResetStatistics() {
+        new AlertDialog.Builder(this)
+                .setTitle("Сбросить статистику?")
+                .setMessage("Будут обнулены освоенные вопросы, точность и активные ошибки "
+                        + "по всем заданиям. Отменить это действие нельзя.")
+                .setNegativeButton("Отмена", null)
+                .setPositiveButton("Сбросить", (dialog, which) -> {
+                    viewModel.resetStatistics();
+                    Toast.makeText(this, "Статистика сброшена", Toast.LENGTH_SHORT).show();
+                })
+                .show();
     }
 
     private void showRule() {
