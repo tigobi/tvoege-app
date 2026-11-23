@@ -25,6 +25,9 @@ public class TaskViewModel extends AndroidViewModel {
     /** Режим тренировки: все вопросы задания или только вопросы с ошибками. */
     public enum Mode { ALL, MISTAKES }
 
+    /** Псевдозадание «Микс»: вопросы всех заданий вперемешку. */
+    public static final int TASK_ID_MIX = -1;
+
     /** Сколько правильных ответов подряд нужно, чтобы вопрос ушёл из работы над ошибками. */
     private static final int MISTAKE_DEBT_ON_ERROR = 2;
 
@@ -46,9 +49,9 @@ public class TaskViewModel extends AndroidViewModel {
             new MutableLiveData<>(Collections.emptyList());
 
     /** Задание, для которого уже запущена загрузка (защищает от повторного запроса при повороте). */
-    private int requestedTaskId = -1;
+    private int requestedTaskId = Integer.MIN_VALUE;
     private Mode requestedMode = Mode.ALL;
-    private int initialTaskId = -1;
+    private int initialTaskId = Integer.MIN_VALUE;
 
     public TaskViewModel(@NonNull Application application) {
         super(application);
@@ -108,7 +111,8 @@ public class TaskViewModel extends AndroidViewModel {
      * Запускает тренировку с заданием по умолчанию, если сессия ещё не создана.
      * При пересоздании Activity состояние уже есть, поэтому повторной загрузки не будет.
      *
-     * @param initialTaskId желаемое задание или -1, чтобы взять первое доступное из БД
+     * @param initialTaskId желаемое задание, {@link #TASK_ID_MIX} для микса
+     *                      или значение, которого нет в БД, чтобы взять первое задание
      */
     public void startTask(int initialTaskId) {
         this.initialTaskId = initialTaskId;
@@ -123,7 +127,9 @@ public class TaskViewModel extends AndroidViewModel {
         if (taskIds == null || taskIds.isEmpty()) {
             return;
         }
-        int taskId = taskIds.contains(initialTaskId) ? initialTaskId : taskIds.get(0);
+        int taskId = taskIds.contains(initialTaskId) || initialTaskId == TASK_ID_MIX
+                ? initialTaskId
+                : taskIds.get(0);
         selectTask(taskId);
     }
 
@@ -181,7 +187,10 @@ public class TaskViewModel extends AndroidViewModel {
                     : MISTAKE_DEBT_ON_ERROR;
         }
         repository.recordAnswer(question.id, isCorrect);
-        loadCurrentTaskStats(question.taskId);
+        Integer activeTaskId = currentTaskId.getValue();
+        // В режиме «Микс» статистика пересчитывается сразу по всей базе,
+        // а не по заданию отвеченного вопроса.
+        loadCurrentTaskStats(activeTaskId == null ? question.taskId : activeTaskId);
         refreshAllTasksStats();
     }
 

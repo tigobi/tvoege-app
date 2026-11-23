@@ -31,6 +31,7 @@ import com.example.tvoege_Java.databinding.ItemTaskStatsBinding;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.button.MaterialButton;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,7 +45,7 @@ import java.util.Map;
 public class UniversalTaskActivity extends AppCompatActivity {
 
     private static final String EXTRA_TASK_ID = "EXTRA_TASK_ID";
-    private static final int NO_TASK_ID = -1;
+    private static final int NO_TASK_ID = Integer.MIN_VALUE;
 
     private ActivityUniversalTaskBinding binding;
     private TaskViewModel viewModel;
@@ -117,7 +118,13 @@ public class UniversalTaskActivity extends AppCompatActivity {
     private void observeViewModel() {
         viewModel.getAvailableTaskIds().observe(this, this::renderTaskButtons);
 
-        viewModel.getCurrentTaskId().observe(this, this::highlightCurrentTask);
+        viewModel.getCurrentTaskId().observe(this, taskId -> {
+            highlightCurrentTask(taskId);
+            if (taskId != TaskViewModel.TASK_ID_MIX) {
+                // Подпись с номером задания нужна только в миксе.
+                binding.tvQuestionTaskLabel.setVisibility(View.GONE);
+            }
+        });
 
         viewModel.getMistakesMode().observe(this, this::renderMistakesState);
 
@@ -147,9 +154,9 @@ public class UniversalTaskActivity extends AppCompatActivity {
     }
 
     private void navigateToTaskByOffset(int offset) {
-        List<Integer> taskIds = viewModel.getAvailableTaskIds().getValue();
+        List<Integer> taskIds = navigationTaskIds();
         Integer current = viewModel.getCurrentTaskId().getValue();
-        if (taskIds == null || current == null) {
+        if (current == null) {
             return;
         }
         int currentPosition = taskIds.indexOf(current);
@@ -160,6 +167,20 @@ public class UniversalTaskActivity extends AppCompatActivity {
         navigateTo(taskIds.get(nextPosition));
     }
 
+    /** Порядок вкладок: «Микс» всегда первая, дальше задания из БД по возрастанию. */
+    private List<Integer> navigationTaskIds() {
+        return navigationTaskIds(viewModel.getAvailableTaskIds().getValue());
+    }
+
+    private List<Integer> navigationTaskIds(List<Integer> taskIds) {
+        List<Integer> navigation = new ArrayList<>();
+        navigation.add(TaskViewModel.TASK_ID_MIX);
+        if (taskIds != null) {
+            navigation.addAll(taskIds);
+        }
+        return navigation;
+    }
+
     private void renderTaskButtons(List<Integer> taskIds) {
         binding.taskButtonsContainer.removeAllViews();
         taskButtons.clear();
@@ -167,17 +188,20 @@ public class UniversalTaskActivity extends AppCompatActivity {
             return;
         }
 
-        for (int i = 0; i < taskIds.size(); i++) {
-            int taskId = taskIds.get(i);
+        List<Integer> navigation = navigationTaskIds(taskIds);
+        for (int i = 0; i < navigation.size(); i++) {
+            int taskId = navigation.get(i);
             ItemTaskButtonBinding item = ItemTaskButtonBinding.inflate(
                     getLayoutInflater(), binding.taskButtonsContainer, false);
             MaterialButton button = item.getRoot();
-            button.setText(String.valueOf(taskId));
+            button.setText(taskId == TaskViewModel.TASK_ID_MIX
+                    ? "Микс"
+                    : String.valueOf(taskId));
 
             ViewGroup.MarginLayoutParams params =
                     (ViewGroup.MarginLayoutParams) button.getLayoutParams();
             params.width = ViewGroup.LayoutParams.WRAP_CONTENT;
-            params.setMarginEnd(i == taskIds.size() - 1 ? 0 : dp(8));
+            params.setMarginEnd(i == navigation.size() - 1 ? 0 : dp(8));
             if (params instanceof LinearLayout.LayoutParams) {
                 // В горизонтальном скролле кнопки должны сохранять естественную ширину,
                 // иначе при большом числе заданий они сжимаются под ширину экрана.
@@ -314,8 +338,10 @@ public class UniversalTaskActivity extends AppCompatActivity {
 
     private void renderCurrentQuestion() {
         QuestionEntity question = viewModel.getCurrentQuestion();
+        boolean isMix = isMixTask();
         binding.btnRule.setVisibility(question == null ? View.GONE : View.VISIBLE);
         if (question == null) {
+            binding.tvQuestionTaskLabel.setVisibility(View.GONE);
             boolean isLoading = Boolean.TRUE.equals(viewModel.getLoading().getValue());
             boolean isMistakes = Boolean.TRUE.equals(viewModel.getMistakesMode().getValue());
             if (isLoading) {
@@ -323,18 +349,37 @@ public class UniversalTaskActivity extends AppCompatActivity {
             } else if (isMistakes) {
                 boolean completed = Boolean.TRUE.equals(
                         viewModel.getMistakesCompleted().getValue());
-                binding.tvQuestion.setText(completed
-                        ? "Все ошибки по этому заданию отработаны"
-                        : "Ошибок по этому заданию пока нет");
+                if (isMix) {
+                    binding.tvQuestion.setText(completed
+                            ? "Все ошибки по всем заданиям отработаны"
+                            : "Ошибок по всем заданиям пока нет");
+                } else {
+                    binding.tvQuestion.setText(completed
+                            ? "Все ошибки по этому заданию отработаны"
+                            : "Ошибок по этому заданию пока нет");
+                }
             } else {
                 binding.tvQuestion.setText("Вопросы не найдены");
             }
             return;
         }
 
+        // В миксе полезно видеть, из какого задания пришёл вопрос.
+        if (isMix) {
+            binding.tvQuestionTaskLabel.setText("Задание " + question.taskId);
+            binding.tvQuestionTaskLabel.setVisibility(View.VISIBLE);
+        } else {
+            binding.tvQuestionTaskLabel.setVisibility(View.GONE);
+        }
+
         binding.tvQuestion.setText(question.text);
         binding.tvQuestion.setAlpha(0f);
         binding.tvQuestion.animate().alpha(1f).setDuration(500);
+    }
+
+    private boolean isMixTask() {
+        Integer taskId = viewModel.getCurrentTaskId().getValue();
+        return taskId != null && taskId == TaskViewModel.TASK_ID_MIX;
     }
 
     private void renderOptions(List<String> options) {

@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
+import com.example.tvoege_Java.TaskViewModel;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -59,7 +61,9 @@ public class QuestionRepository {
     public void getQuestionsForTask(int taskId, Callback<List<QuestionEntity>> callback) {
         executor.execute(() -> {
             ensureContentUpToDate();
-            List<QuestionEntity> list = dao.getQuestionsForTask(taskId);
+            List<QuestionEntity> list = taskId == TaskViewModel.TASK_ID_MIX
+                    ? dao.getAllQuestionsPrioritized()
+                    : dao.getQuestionsForTask(taskId);
             mainHandler.post(() -> callback.onResult(list));
         });
     }
@@ -67,7 +71,9 @@ public class QuestionRepository {
     public void getMistakesForTask(int taskId, Callback<List<QuestionEntity>> callback) {
         executor.execute(() -> {
             ensureContentUpToDate();
-            List<QuestionEntity> list = dao.getMistakesForTask(taskId);
+            List<QuestionEntity> list = taskId == TaskViewModel.TASK_ID_MIX
+                    ? dao.getAllMistakes()
+                    : dao.getMistakesForTask(taskId);
             mainHandler.post(() -> callback.onResult(list));
         });
     }
@@ -91,10 +97,17 @@ public class QuestionRepository {
     public void getTaskStats(int taskId, Callback<TaskStats> callback) {
         executor.execute(() -> {
             ensureContentUpToDate();
-            TaskStats stats = dao.getTaskStats(taskId);
-            if (stats == null) {
-                stats = new TaskStats();
-                stats.taskId = taskId;
+            TaskStats stats;
+            if (taskId == TaskViewModel.TASK_ID_MIX) {
+                // В режиме «Микс» статистика — общий агрегат по всем заданиям.
+                stats = TaskStats.sum(dao.getAllTasksStats());
+                stats.taskId = TaskViewModel.TASK_ID_MIX;
+            } else {
+                stats = dao.getTaskStats(taskId);
+                if (stats == null) {
+                    stats = new TaskStats();
+                    stats.taskId = taskId;
+                }
             }
             TaskStats result = stats;
             mainHandler.post(() -> callback.onResult(result));

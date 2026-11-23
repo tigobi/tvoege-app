@@ -13,16 +13,19 @@ public interface QuestionDao {
      * Сначала вопросы с непогашенным «долгом» по ошибке, затем ещё не пройденные,
      * затем остальные. Внутри каждой группы порядок случайный.
      */
-    @Query("SELECT * FROM questions WHERE taskId = :taskId "
-            + "ORDER BY CASE "
-            + "WHEN mistakeDebt > 0 THEN 0 "
-            + "WHEN correctCount = 0 THEN 1 "
-            + "ELSE 2 END, RANDOM()")
+    @Query(QuestionQueries.TASK_QUESTIONS_PRIORITIZED)
     List<QuestionEntity> getQuestionsForTask(int taskId);
 
-    @Query("SELECT * FROM questions WHERE taskId = :taskId AND mistakeDebt > 0 "
-            + "ORDER BY mistakeDebt DESC, RANDOM()")
+    @Query(QuestionQueries.TASK_MISTAKES)
     List<QuestionEntity> getMistakesForTask(int taskId);
+
+    /** То же приоритетное перемешивание, но сразу по всем заданиям (режим «Микс»). */
+    @Query(QuestionQueries.ALL_QUESTIONS_PRIORITIZED)
+    List<QuestionEntity> getAllQuestionsPrioritized();
+
+    /** Все активные ошибки по всем заданиям (режим «Микс»). */
+    @Query(QuestionQueries.ALL_MISTAKES)
+    List<QuestionEntity> getAllMistakes();
 
     @Query("SELECT DISTINCT taskId FROM questions ORDER BY taskId")
     List<Integer> getTaskIds();
